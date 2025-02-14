@@ -1,239 +1,144 @@
-"use strict";
-const canvas = document.getElementById("tetris");
-const context = canvas.getContext("2d");
-context.scale(20, 20);
+const gridSpace = 30;
 
-function arenaSweep(){
+let fallingPiece;
+let gridPieces = [];
+let lineFades = [];
+let gridWorkers = [];
 
-    let rowCount = 1;
-    outer: for(let y = arena.length; y > 0; --y){
-        for(let x = 0; x < arena[y].length - 1; ++x){
-            if(arena[x][y] === 0){
-                continue outer;
-            }
-        }
+let currentScore = 0;
+let currentLevel = 1;
+let linesCleared = 0;
 
-        const row = arena.splice(y, 1)[0].fill(0);
-        arena.unshift(row);
-        ++y;
-        player.score += rowCount * 10;
-        rowCount *= 2;
-    }
-}
+let ticks = 0;
+let updateEvery = 15;
+let updateEveryCurrent = 15;
+let fallSpeed = gridSpace * 0.5;
+let pauseGame = false;
+let gameOver = false;
 
-function collide(arena, player){
-
-    const m = player.matrix;
-    const o = player.pos;
-    for(let y = 0; y < m.length; ++y){
-        for(let x = 0; x < m[y].length; ++x){
-            if(m[y][x] !== 0 && (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0){
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
-function createMatrix(w, h){
-
-    const matrix = [];
-    while(h--){
-        matrix.push(new Array(w).fill(0));
-    }
-    return matrix;
-}
-
-function createPiece(type){
-
-    if(type === "I"){
-        return[
-            [0, 1, 0, 0],
-            [0, 1, 0, 0],
-            [0, 1, 0, 0],
-            [0, 1, 0, 0],
-        ];
-    }else if(type === "L"){
-        return[
-            [0, 2, 0],
-            [0, 2, 0],
-            [0, 2, 2],
-        ];
-    }else if(type === "J"){
-        return[
-            [0, 3, 0],
-            [0, 3, 0],
-            [3, 3, 0],
-        ];
-    }else if(type === "O"){
-        return[
-            [4, 4],
-            [4, 4],
-        ];
-    }else if(type === "Z"){
-        return[
-            [5, 5, 0],
-            [0, 5, 5],
-            [0, 0, 0],
-        ];
-    }else if(type === "S"){
-        return[
-            [0, 6, 6],
-            [6, 6, 0],
-            [0, 0, 0],
-        ];
-    }else if(type === "T"){
-        return[
-            [0, 7, 0],
-            [7, 7, 7],
-            [0, 0, 0],
-        ];
-    }
-}
-
-
-function drawMatrix(matrix, offset){
-
-    matrix.forEach((row, y) => {
-        row.forEach((value, x) =>{
-            if(value !== 0){
-                context.fillStyle = colors[value];
-                context.fillRec(x + offset.x, y + offset.y, 1, 1);
-            }
-        });
-    });
-}
-
-function draw(){
-    context.fillStyle = "#000";
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    drawMatrix(arena, {x: 0, y: 0});
-    drawMatrix(player.matrix, player.pos);
-}
-
-function merge(arena, player){
-    player.matrix.forEach((row, y) =>{
-        row.forEach((value, x) =>{
-            if(value !== 0){
-                arena[y + player.pos.y][x + player.pos.x] = value;
-            }
-        });
-    });
-}
-
-function rotate(matrix, dir){
-    for(let y = 0; y < matrix.length; ++y){
-        for(let x = 0; x < y; ++x){
-            [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
-        }
-    }
-    if(dir > 0){
-        matrix.forEach((row) => row.reverse());
-    }else{
-        matrix.reverse();
-    }
-}
-
-function playerDrop(){
-        
-    player.pos.y++;
-    if(collide(arena, player)){
-        player.y--;
-        merge(arena, player);
-        playerReset();
-        arenaSweep();
-        updateScore();
-    }
-    dropCounter = 0;
-}
-
-function playerMove(offset){
-    player.pos.x += offset;
-    if(collide(arena, player)){
-        player.pos.x -= offset;
-    }
-}
-
-function playerReset(){
-    const pieces = "TJLOSZI";
-    player.matrix = createPiece(pieces[(pieces.length * Math,ranndom()) | 0]);
-    player.pos.y = 0;
-    player.pos.x = ((arena[0].length / 2) | 0) - ((player.matrix[0].length / 2) | 0);
-    if(collide(arena, player)){
-        arena.forEach((row) => row.fill(0));
-        player.score = 0;
-        updateScore();
-    }
-}
- 
-function playerRotate(dir){
-    const pos = player.pos.x;
-    let offset = 1;
-    rotate(player.matrix, dir);
-    while(collide(arena, player)){
-        player.pos.x += offset;
-        offset = -(offset + (offset > 0 ? 1 : -1));
-        if(offset > player.matrix[0].length){
-            rotate(player.matrix, -dir);
-            player.pos.x = pos;
-            return;
-        }
-    }
-}
-
-let dropCounter = 0;
-let dropInterval = 1000;
-let lastTime = 0;
-
-function update(time = 0){
-    const deltaTime = time - lastTime;
-    dropCounter += deltaTime;
-    if(dropCounter > dropInterval){
-        playerDrop();
-    }
-    lastTime = time;
-    draw();
-    requestAnimationFrame(update);
-}
-
-function updateScore(){
-
-    document.getElementById("score").innerText = "Score : " + player.score;
-}
-
-document.addEventListener("keydown", (event) =>{
-
-    if(event.keyCode === 37){
-        playerMove(-1);
-    }else if(event.keyCode === 39){
-        playerMove(1);
-    }else if(event.keyCode === 40){
-        playerMove();
-    }else if(event.keyCode === 81){
-        playerMove(-1);
-    }else if(event.keyCode === 87){
-        playerMove(1);
-    }
-});
+const gameEdgeLeft = 150;
+const gameEdgeRight = 450;
 
 const colors = [
-    null,
-    "#ff0d72",
-    "#0dc2ff",
-    "#0dff72",
-    "#f538ff",
-    "#ff8e0d",
-    "#ffe138",
-    "#3877ff",
+    '#dca3ff', '#ff90a0', '#80ffb4', '#ff7666', '#70b3f5', '#b2e77d', '#ffd700'
 ];
 
-const arena = createMatrix(12, 20);
-const player = {
-    pos: {x: 0, y: 0},
-    matrix: null,
-    score: 0,
-};
-playerReset();
-updateScore();
-update();
+function setup() {
+    createCanvas(600, 540);
+    fallingPiece = new PlayPiece();
+    fallingPiece.resetPiece();
+    textFont('Ubuntu');
+}
+
+function draw() {
+    const colorDark = '#0d0d0d';
+    const colorLight = '#304550';
+    const colorBackground = '#e1eeb0';
+
+    background(colorBackground);
+    fill(25);
+    noStroke();
+    rect(gameEdgeRight, 0, 150, height);
+    rect(0, 0, gameEdgeLeft, height);
+
+    fill(colorBackground);
+    rect(450, 80, 150, 70);
+    rect(460, 405, 130, 130, 5, 5);
+    rect(460, 210, 130, 60, 5, 5);
+    rect(460, 280, 130, 60, 5, 5);
+
+    fill(colorLight);
+    rect(450, 85, 150, 20);
+    rect(450, 110, 150, 4);
+    rect(450, 140, 150, 4);
+
+    fill(colorBackground);
+    rect(460, 60, 130, 35, 5, 5);
+    strokeWeight(3);
+    noFill();
+    stroke(colorLight);
+    rect(465, 65, 120, 25, 5, 5);
+    rect(465, 410, 120, 120, 5, 5);
+    rect(465, 215, 120, 50, 5, 5);
+    rect(465, 285, 120, 50, 5, 5);
+
+    fill(25);
+    noStroke();
+    textSize(24);
+    textAlign(CENTER);
+    text("Score", 525, 85);
+    text("Level", 525, 238);
+    text("Lines", 525, 308);
+
+    textSize(24);
+    textAlign(RIGHT);
+    text(currentScore, 560, 135);
+    text(currentLevel, 560, 260);
+    text(linesCleared, 560, 330);
+
+    stroke(colorDark);
+    line(gameEdgeRight, 0, gameEdgeRight, height);
+    fallingPiece.show();
+
+    if (keyIsDown(DOWN_ARROW)) {
+        updateEvery = 2;
+    } else {
+        updateEvery = updateEveryCurrent;
+    }
+
+    if (!pauseGame) {
+        ticks++;
+        if (ticks >= updateEvery) {
+            ticks = 0;
+            fallingPiece.fall(fallSpeed);
+        }
+    }
+
+    for (let i = 0; i < gridPieces.length; i++) {
+        gridPieces[i].show();
+    }
+    for (let i = 0; i < lineFades.length; i++) {
+        lineFades[i].show();
+    }
+    if (gridWorkers.length > 0) {
+        gridWorkers[0].work();
+    }
+
+    textAlign(CENTER);
+    fill(255);
+    noStroke();
+    textSize(14);
+    text("Controls:\n↑\n← ↓ →\n", 75, 155);
+    text("Left and Right:\nmove side to side", 75, 230);
+    text("Up:\nrotate", 75, 280);
+    text("Down:\nfall faster", 75, 330);
+    text("R:\nreset game", 75, 380);
+
+    if (gameOver) {
+        fill(colorDark);
+        textSize(54);
+        textAlign(CENTER);
+        text("Game Over!", 300, 270);
+    }
+
+    strokeWeight(3);
+    stroke('#304550');
+    noFill();
+    rect(0, 0, width, height);
+}
+
+function keyPressed() {
+    if (keyCode === 82) {
+        resetGame();
+    }
+    if (!pauseGame) {
+        if (keyCode === LEFT_ARROW) {
+            fallingPiece.input(LEFT_ARROW);
+        } else if (keyCode === RIGHT_ARROW) {
+            fallingPiece.input(RIGHT_ARROW);
+        }
+        if (keyCode === UP_ARROW) {
+            fallingPiece.input(UP_ARROW);
+        }
+    }
+}
